@@ -1,4 +1,28 @@
 # csv-to-arrow-js
 A proof of concept demo to transform CSV to Arrow in JS using PapaParse and the new Arrow Builders
 
-Pull down and build the branch in this PR to run for now: https://github.com/apache/arrow/pull/4476
+Uses the new Builders from this PR: https://github.com/apache/arrow/pull/4476
+
+### Cloning
+
+This demo uses the file `big.csv` from the PapaParse examples. I've committed this file with [git large-file storage](https://git-lfs.github.com/).
+
+After installing `git-lfs`, run these commands to clone the repository and pull the large files:
+
+```sh
+git clone https://github.com/trxcllnt/csv-to-arrow-js.git
+cd csv-to-arrow-js
+git lfs pull
+```
+
+If you can't install `git-lfs`, you can download the "Large file" from the [PapaParse demo page](https://www.papaparse.com/demo).
+
+### Running
+
+```sh
+# install the dependencies
+npm install
+# run the demo to convert big.csv to an Arrow RecordBatch stream.
+# The Arrow table is printed to the console with the `arrow2csv` utility
+npm start
+```

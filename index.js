@@ -4,14 +4,14 @@ const { AsyncIterable } = require('ix');
 const {
     Bool, Utf8, Int64, Float64, Struct, Map_,
     Field, Builder, RecordBatch, RecordBatchWriter
-} = require('../index');
+} = require('apache-arrow');
 
 const parseOptions = { header: true, dynamicTyping: true };
 const csvToJSONStream = fs
     .createReadStream('./big.csv')
     .pipe(Papa.parse(Papa.NODE_STREAM_INPUT, parseOptions));
 
-AsyncIterable.fromNodeStream(csvToJSONStream, 1)
+AsyncIterable.fromNodeStream(csvToJSONStream)
     // multicast the source CSV stream so we can share a single
     // underlying iterator between multiple consumers.
     .publish((JSONRows) => {
