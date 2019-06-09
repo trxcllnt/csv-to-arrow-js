@@ -10,8 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "apache-arrow": "trxcllnt/apache-arrow-js",
+    "csvtojson": "2.0.8",
     "ix": "2.5.3",
-    "metrohash": "2.6.0",
-    "papaparse": "5.0.0"
+    "metrohash": "2.6.0"
   }
 }

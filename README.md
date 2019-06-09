@@ -1,7 +1,7 @@
 # csv-to-arrow-js
-A proof of concept demo to transform CSV to Arrow in JS using PapaParse and the new Arrow Builders
+A proof of concept demo to transform CSV to Arrow in JS using [`csvtojson`](https://www.npmjs.com/package/csvtojson) and the new Arrow Builder stream APIs.
 
-Uses the new Builders from this PR: https://github.com/apache/arrow/pull/4476
+See this PR for more information: https://github.com/apache/arrow/pull/4476
 
 ### Cloning
 
@@ -25,4 +25,6 @@ npm install
 # run the demo to convert big.csv to an Arrow RecordBatch stream.
 # The Arrow table is printed to the console with the `arrow2csv` utility
 npm start
+# or time how long it takes
+time node index.js > big.arrow
 ```

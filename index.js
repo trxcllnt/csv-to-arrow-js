@@ -1,5 +1,5 @@
 const fs = require('fs');
-const Papa = require('papaparse');
+const csvToJSON = require('csvtojson')
 const { AsyncIterable } = require('ix');
 const { metrohash64 } = require('metrohash');
 const {
@@ -7,10 +7,9 @@ const {
     Field, Builder, RecordBatch, RecordBatchWriter
 } = require('apache-arrow');
 
-const papaOpts = { header: true, dynamicTyping: true };
 const csvToJSONStream = fs
     .createReadStream('./big.csv')
-    .pipe(Papa.parse(Papa.NODE_STREAM_INPUT, papaOpts));
+    .pipe(csvToJSON({}, { objectMode: true }));
 
 AsyncIterable.fromNodeStream(csvToJSONStream)
     // multicast the source CSV stream so we can share a single
