@@ -11,6 +11,7 @@
   "dependencies": {
     "apache-arrow": "trxcllnt/apache-arrow-js",
     "ix": "2.5.3",
+    "metrohash": "2.6.0",
     "papaparse": "5.0.0"
   }
 }

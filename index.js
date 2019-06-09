@@ -1,15 +1,16 @@
 const fs = require('fs');
 const Papa = require('papaparse');
 const { AsyncIterable } = require('ix');
+const { metrohash64 } = require('metrohash');
 const {
     Bool, Utf8, Int64, Float64, Struct, Map_, Dictionary, Int32,
     Field, Builder, RecordBatch, RecordBatchWriter
 } = require('apache-arrow');
 
-const parseOptions = { header: true, dynamicTyping: true };
+const papaOpts = { header: true, dynamicTyping: true };
 const csvToJSONStream = fs
     .createReadStream('./big.csv')
-    .pipe(Papa.parse(Papa.NODE_STREAM_INPUT, parseOptions));
+    .pipe(Papa.parse(Papa.NODE_STREAM_INPUT, papaOpts));
 
 AsyncIterable.fromNodeStream(csvToJSONStream)
     // multicast the source CSV stream so we can share a single
@@ -25,11 +26,11 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
             // child values from arbitrary JS objects by key and writing them
             // into the child Vector Builders, which makes it the perfect type
             // to use to transpose a stream of JSON rows to a columnar layout
-            const outermostDataType = jsToArrowType(row0);
+            const { type, ...otherBuilderOptions } = jsValueToArrowBuilderOptions(row0);
             const transform = Builder.throughAsyncIterable({
-                type: outermostDataType,
-                // flush chunks once their size grows beyond 256kb
-                queueingStrategy: 'bytes', highWaterMark: 1 << 18,
+                type, ...otherBuilderOptions,
+                // flush chunks once their size grows beyond 64kb
+                queueingStrategy: 'bytes', highWaterMark: 1 << 16,
                 // null-value sentinels that will signify "null" slots
                 nullValues: [null, undefined, 'n/a', 'NULL'],
             });
@@ -48,18 +49,39 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
 
 
 // Naively translate JS values to their rough Arrow equivalents
-function jsToArrowType(value) {
-    switch (typeof value) {
-        case 'bigint': return new Int64();
-        case 'boolean': return new Bool();
-        case 'number': return new Float64();
-        case 'string': return new Dictionary(new Utf8(), new Int32());
-        case 'object':
-            const fields = Object.keys(value).map((name) => {
-                const type = jsToArrowType(value[name]);
-                return type ? new Field(name, type, true) : null;
-            }).filter(Boolean); 
-            return Array.isArray(value) ? new Struct(fields) : new Map_(fields);
+function jsValueToArrowBuilderOptions(value) {
+    if (value) {
+        switch (typeof value) {
+            case 'bigint':
+                return { type: new Int64() };
+            case 'boolean':
+                return { type: new Bool() };
+            case 'number':
+                return { type: new Float64() };
+            case 'string':
+                return { type: new Dictionary(new Utf8(), new Int32()), dictionaryHashFunction: metrohash64 };
+            case 'object':
+
+                const { childFields, childBuilderOptions } = Object.keys(value).reduce((memo, name) => {
+                    const { type, ...childBuilderOptions } = jsValueToArrowBuilderOptions(value[name]);
+                    if (type) {
+                        memo.childBuilderOptions.push(childBuilderOptions);
+                        memo.childFields.push(new Field(name, type, true));
+                    }
+                    return memo;
+                }, { childFields: [], childBuilderOptions: [] });
+
+                if (Array.isArray(value)) {
+                    return { type: new Struct(childFields), children: childBuilderOptions };
+                }
+
+                return {
+                    type: new Map_(childFields),
+                    children: childBuilderOptions.reduce((children, childBuilderOptions, childIndex) => ({
+                        ...children, [childFields[childIndex].name]: childBuilderOptions
+                    }), {})
+                };
+        }
     }
-    return null;
+    return {};
 }
