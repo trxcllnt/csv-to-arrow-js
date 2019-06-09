@@ -2,7 +2,7 @@ const fs = require('fs');
 const Papa = require('papaparse');
 const { AsyncIterable } = require('ix');
 const {
-    Bool, Utf8, Int64, Float64, Struct, Map_,
+    Bool, Utf8, Int64, Float64, Struct, Map_, Dictionary, Int32,
     Field, Builder, RecordBatch, RecordBatchWriter
 } = require('apache-arrow');
 
@@ -28,8 +28,8 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
             const outermostDataType = jsToArrowType(row0);
             const transform = Builder.throughAsyncIterable({
                 type: outermostDataType,
-                // flush chunks once their size grows beyond 64kb
-                queueingStrategy: 'bytes', highWaterMark: 1 << 16,
+                // flush chunks once their size grows beyond 256kb
+                queueingStrategy: 'bytes', highWaterMark: 1 << 18,
                 // null-value sentinels that will signify "null" slots
                 nullValues: [null, undefined, 'n/a', 'NULL'],
             });
@@ -50,10 +50,10 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
 // Naively translate JS values to their rough Arrow equivalents
 function jsToArrowType(value) {
     switch (typeof value) {
-        case 'string': return new Utf8();
         case 'bigint': return new Int64();
         case 'boolean': return new Bool();
         case 'number': return new Float64();
+        case 'string': return new Dictionary(new Utf8(), new Int32());
         case 'object':
             const fields = Object.keys(value).map((name) => {
                 const type = jsToArrowType(value[name]);
