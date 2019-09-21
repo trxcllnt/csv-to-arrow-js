@@ -3,7 +3,7 @@ const csvToJSON = require('csvtojson')
 const { AsyncIterable } = require('ix');
 const { metrohash64 } = require('metrohash');
 const {
-    Bool, Utf8, Int64, Float64, Struct, Map_, Dictionary, Int32,
+    Bool, Utf8, Int64, Float64, Struct, Dictionary, Int32,
     Field, Builder, RecordBatch, RecordBatchWriter
 } = require('apache-arrow');
 
@@ -19,9 +19,9 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
             // Determine the schema from the types of values present in the first row
             const rest = JSONRows.skip(1);
             const row0 = await JSONRows.first();
-            // This top-level Builder builds an Arrow MapVector, which is a
+            // This top-level Builder builds an Arrow StructVector, which is a
             // nested Vector that parents other Vectors, addressing them by
-            // field name. The MapBuilder has built-in support for plucking
+            // field name. The StructBuilder has built-in support for plucking
             // child values from arbitrary JS objects by key and writing them
             // into the child Vector Builders, which makes it the perfect type
             // to use to transpose a stream of JSON rows to a columnar layout
@@ -34,11 +34,11 @@ AsyncIterable.fromNodeStream(csvToJSONStream)
                 nullValues: [null, undefined, 'n/a', 'NULL'],
             });
             // Concatenate the first row with the rest of the rows, and
-            // pipe them through the Arrow MapBuilder transform function
+            // pipe them through the Arrow StructBuilder transform function
             return AsyncIterable.of(row0).concat(rest).pipe(transform);
         });
     })
-    // Translate each Arrow MapVector chunk into a RecordBatch so it can be
+    // Translate each Arrow StructVector chunk into a RecordBatch so it can be
     // flushed as an Arrow IPC Message by the RecordBatchStreamWriter transform stream
     .map((chunk) => RecordBatch.new(chunk.data.childData, chunk.type.children))
     // Pipe each RecordBatch through the stream writer transform
@@ -75,7 +75,7 @@ function jsValueToArrowBuilderOptions(value) {
                 }
 
                 return {
-                    type: new Map_(childFields),
+                    type: new Struct(childFields),
                     children: childBuilderOptions.reduce((children, childBuilderOptions, childIndex) => ({
                         ...children, [childFields[childIndex].name]: childBuilderOptions
                     }), {})
